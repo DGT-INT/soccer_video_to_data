@@ -1,4 +1,9 @@
 02 Resources/Meeting notes.docx
-03 Data/
+03 Data/football-players-detection-20/
+03 Data/runs/
+03 Data/121364_0_results_1.mp4
+03 Data/121364_0_results_2.mp4
+03 Data/121364_0_results_4.mp4
+03 Data/yolov8s.pt
 env/
 .env
