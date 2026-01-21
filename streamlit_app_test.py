@@ -15,26 +15,16 @@ sample_dir = Path('03 Data/sample_footage')
 sample_files = list(sample_dir.glob('*'))
 
 if use_sample:
-    selected = st.selectbox('Choose a sample video',
+    original_video = st.selectbox('Choose a sample video',
                             sample_files,
                             format_func=lambda x: x.name)
-    
-    st.video(selected)
 
+else: 
+    original_video = st.file_uploader("Upload soccer footage to Smart Soccer Insights", type=["mp4", "mov", "avi"])
+    st.success("Original video uploaded successfully!")
 
+# Display Original Video
+if original_video is not None:
+    st.video(original_video)
 
-#     selected = st.checkbox('Choose a sample video', sample_files)
-
-#     original_video = open(selected, 'rb')
-
-# else:
-#     original_video = None
-#     st.write("Please upload your own soccer footage.")
-    
-# # Original Video
-# if original_video is None:
-#     original_video = st.file_uploader("Upload soccer footage to Smart Soccer Insights", type=["mp4", "mov", "avi"])
-#     st.success("Original video uploaded successfully!")
-
-#st.video(original_video, format="video/mp4", start_time=0)
     
