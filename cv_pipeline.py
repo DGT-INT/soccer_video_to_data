@@ -1,4 +1,4 @@
-#%%
+# %%
 import os
 from dotenv import load_dotenv
 os.environ["QWEN_2_5_ENABLED"] = "False"
@@ -7,6 +7,21 @@ os.environ["CORE_MODEL_SAM2_ENABLED"] = "False"
 os.environ["CORE_MODEL_GAZE_ENABLED"] = "False"
 os.environ["CORE_MODEL_GROUNDINGDINO_ENABLED"] = "False"
 from inference import get_model
+from tqdm import tqdm
+import supervision as sv
+import torch
+from transformers import AutoProcessor, SiglipVisionModel
+import numpy as np
+from more_itertools import chunked
+
+SIGLIP_MODEL_PATH = 'google/siglip-base-patch16-224'
+
+
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+EMBEDDINGS_MODEL = SiglipVisionModel.from_pretrained(SIGLIP_MODEL_PATH).to(DEVICE)
+#EMBEDDINGS_PROCESSOR = AutoProcessor.from_pretrained(SIGLIP_MODEL_PATH) commented out this line due to kernel crashing
+
+# pip install git+https://github.com/roboflow/sports.git
 
 load_dotenv()
 
@@ -23,7 +38,45 @@ def ssi_bounding_box(video_path):
         model_id=PLAYER_DETECTION_MODEL_ID,
         api_key=ROBOFLOW_API_KEY
     )
+    
+    STRIDE = 30
+    PLAYER_ID = 2
+    
+    def extract_crops(video_path: str):
+        frame_generator = sv.get_video_frames_generator(video_path, stride=STRIDE)
 
-    return "Model loaded successfully"
+        crops=[]
+        for frame in tqdm(frame_generator, desc='collecting crops'):
+            result = PLAYER_DETECTION_MODEL.infer(frame, confidence=0.3)[0]
+            detections = sv.Detections.from_inference(result)
+            detections = detections.with_nms(threshold=0.5, class_agnostic=True)
+            detections = detections[detections.class_id== PLAYER_ID]
+            crops += [
+                sv.crop_image(frame, xyxy)
+                for xyxy
+                in detections.xyxy
+            ]
+        return crops
+    
+    crops = extract_crops(video_path)
+    print("Number of crops extracted:", len(crops))
+    sv.plot_images_grid(crops[:100], grid_size=(10,10))
+    
+    BATCH_SIZE = 32
+    crops = [sv.cv2_to_pillow(crop) for crop in crops]
+    batches = chunked(crops, BATCH_SIZE)
+    data = []
+    
+    with torch.no_grad():
+        for batch in tqdm(batches, desc='embeddings extraction'):
+            inputs = EMBEDDINGS_PROCESSOR(images=batch, return_tensors='pt').to(DEVICE)
+            outputs = EMBEDDINGS_MODEL(**inputs)
+            embeddings = torch.mean(outputs.last_hidden_state, dim=1).cpu().numpy()
+            data.append(embeddings)
+        
+    data = np.concatenate(data)
+
+    data.shape
+
 
 # %%
