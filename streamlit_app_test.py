@@ -3,13 +3,14 @@ from pathlib import Path
 
 # Set page configuration
 st.title("Smart Soccer Insights")
+st.logo("02 Resources/logo.png", size="large")
 st.header("By: :green[DGT-International]", divider='rainbow')
 st.markdown(':green[DGT-International] developped a cutting-edge AI app that tracks soccer players.')
 
 original_video = None
 
 # sample video
-use_sample = st.checkbox("Use a sample video")
+use_sample = st.checkbox("Use a sample video", value = False)
 
 sample_dir = Path('03 Data/sample_footage')
 sample_files = list(sample_dir.glob('*'))
@@ -25,6 +26,9 @@ else:
 
 # Display Original Video
 if original_video is not None:
-    st.video(original_video)
+    show_bounding_boxes = st.checkbox("Show bounding boxes", value = False)
+    if show_bounding_boxes:
+        st.video("03 Data/121364_0_results_1_bounding_boxes.mp4")
+    else:
+        st.video(original_video)
 
-    
