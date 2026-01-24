@@ -42,7 +42,6 @@ PLAYER_DETECTION_MODEL_ID = "football-players-detection-3zvbc/20"
 
 def ssi_bounding_box(video_path, target_video_path):
     
-    print("Running SSI bounding box on:", video_path)
     ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY")
     if ROBOFLOW_API_KEY is None:
         raise RuntimeError("ROBOFLOW_API_KEY not found in environment")
@@ -52,7 +51,7 @@ def ssi_bounding_box(video_path, target_video_path):
         api_key=ROBOFLOW_API_KEY
     )
     
-    STRIDE = 30 # use a larger stride for faster inferences during testing
+    STRIDE = 90 # use a larger stride for faster inferences during testing. set it back to 30 for final version.
     BALL_ID = 0
     GOALKEEPER_ID = 1
     PLAYER_ID = 2
@@ -76,8 +75,8 @@ def ssi_bounding_box(video_path, target_video_path):
         return crops
     
     crops = extract_crops(video_path)
-    print("Number of crops extracted:", len(crops))
-    sv.plot_images_grid(crops[:100], grid_size=(10,10))
+    #print("Number of crops extracted:", len(crops))
+    #sv.plot_images_grid(crops[:100], grid_size=(10,10))
     
     BATCH_SIZE = 32
     crops = [sv.cv2_to_pillow(crop) for crop in crops]
@@ -112,24 +111,19 @@ def ssi_bounding_box(video_path, target_video_path):
 
             data.append(embeddings)
 
-            print("Embedding batch shape:", embeddings.shape)
+            #print("Embedding batch shape:", embeddings.shape)
 
     data = np.concatenate(data)
 
-    data.shape
-    print("data shape is:",data.shape)
+    #print("data shape is:",data.shape)
 
 
     REDUCER = umap.UMAP(n_components=3)
     CLUSTERING_MODEL = KMeans(n_clusters=2)
 
-    #debugging
-    print("DEBUG — type(data):", type(data))
-    print("DEBUG — data.shape BEFORE any fix:", np.array(data).shape)
-
     # dimensionality reduction
     projections = REDUCER.fit_transform(data)
-    print("Projections shape:", projections.shape)
+    #print("Projections shape:", projections.shape)
 
     clusters = CLUSTERING_MODEL.fit_predict(projections)
 
@@ -142,7 +136,7 @@ def ssi_bounding_box(video_path, target_video_path):
     if cluster ==0
     ]
 
-    sv.plot_images_grid(team_0[:100], grid_size=(10, 10))
+    #sv.plot_images_grid(team_0[:100], grid_size=(10, 10))
 
     def resolve_goalkeepers_team_id(players_detections: sv.Detections,
                                 goalkeepers_detections: sv.Detections
@@ -162,13 +156,15 @@ def ssi_bounding_box(video_path, target_video_path):
 
         return np.array(goalkeepers_team_ids)
     
-    ellipse_annotator = sv.EllipseAnnotator(
-        color = sv.ColorPalette.from_hex(['#00BFFF', '#FF1493', '#FFD700']),
+    box_annotator = sv.BoxAnnotator(
+        #color = sv.ColorPalette.from_hex(['#00BFFF', '#FF1493', '#FFD700']), # will uncomment after i focus on temporal anchoring
+        color = sv.ColorPalette.from_hex(['#FFD700']),
         thickness = 2
     )
 
     label_annotator = sv.LabelAnnotator(
-        color = sv.ColorPalette.from_hex(['#00BFFF', '#FF1493', '#FFD700']),
+        #color = sv.ColorPalette.from_hex(['#00BFFF', '#FF1493', '#FFD700']),
+        color = sv.ColorPalette.from_hex(['#FFD700']),
         text_color=sv.Color.from_hex('#000000'),
         text_position=sv.Position.BOTTOM_CENTER
     )
@@ -179,8 +175,6 @@ def ssi_bounding_box(video_path, target_video_path):
 
     tracker = sv.ByteTrack()
     tracker.reset()
-
-    print("Processing video for bounding box annotation...")
 
     video_info = sv.VideoInfo.from_video_path(video_path)
     video_sink = sv.VideoSink(target_video_path, video_info=video_info)
@@ -258,12 +252,9 @@ def ssi_bounding_box(video_path, target_video_path):
 
             # dimensionality reduction
             projections = REDUCER.fit_transform(data)
-            print("Projections shape:", projections.shape)
+            #print("Projections shape:", projections.shape)
 
-            clusters = CLUSTERING_MODEL.fit_predict(projections)
-
-
-            ###
+            players_detections.class_id = CLUSTERING_MODEL.fit_predict(projections)
             #players_detections.class_id = CLUSTERING_MODEL.fit_predict(players_crops) # worked with siglip
 
             goalkeepers_detections.class_id = resolve_goalkeepers_team_id(
@@ -275,7 +266,6 @@ def ssi_bounding_box(video_path, target_video_path):
             all_detections = sv.Detections.merge([players_detections, goalkeepers_detections, referees_detections])
             all_detections.class_id = all_detections.class_id.astype(int) # added this to ensure all_detections were integers
 
-
             labels = [
                 f"{tracker_id}"
                 for tracker_id
@@ -283,9 +273,9 @@ def ssi_bounding_box(video_path, target_video_path):
                 ]
 
             annotated_frame = frame.copy()
-            annotated_frame = ellipse_annotator.annotate(annotated_frame, all_detections)
+            annotated_frame = box_annotator.annotate(annotated_frame, all_detections)
             annotated_frame = triangle_annotator.annotate(annotated_frame, ball_detections)
-            annotated_frame = label_annotator.annotate(annotated_frame, all_detections, labels=labels)
+            #annotated_frame = label_annotator.annotate(annotated_frame, all_detections, labels=labels)
 
             video_sink.write_frame(annotated_frame)
 
