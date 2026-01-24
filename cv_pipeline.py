@@ -1,6 +1,7 @@
 # %%
 import os
 from dotenv import load_dotenv
+from openai import batches
 os.environ["QWEN_2_5_ENABLED"] = "False"
 os.environ["CORE_MODEL_SAM_ENABLED"] = "False"
 os.environ["CORE_MODEL_SAM2_ENABLED"] = "False"
@@ -13,13 +14,22 @@ import torch
 from transformers import AutoProcessor, SiglipVisionModel
 import numpy as np
 from more_itertools import chunked
+import clip
+from PIL import Image
 
-SIGLIP_MODEL_PATH = 'google/siglip-base-patch16-224'
 
-
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-EMBEDDINGS_MODEL = SiglipVisionModel.from_pretrained(SIGLIP_MODEL_PATH).to(DEVICE)
+# commented out next 4 lines due to kernel craching. I originally trained the model in google colab with a GPU but this crashes in streamlit. instead of siglip, i will use clip.
+#SIGLIP_MODEL_PATH = 'google/siglip-base-patch16-224'
+#DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+#EMBEDDINGS_MODEL = SiglipVisionModel.from_pretrained(SIGLIP_MODEL_PATH).to(DEVICE)
 #EMBEDDINGS_PROCESSOR = AutoProcessor.from_pretrained(SIGLIP_MODEL_PATH) commented out this line due to kernel crashing
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+CLIP_MODEL, CLIP_PREPROCESS = clip.load(
+    "ViT-B/32",
+    device=DEVICE
+)
 
 # pip install git+https://github.com/roboflow/sports.git
 
@@ -66,17 +76,41 @@ def ssi_bounding_box(video_path):
     crops = [sv.cv2_to_pillow(crop) for crop in crops]
     batches = chunked(crops, BATCH_SIZE)
     data = []
-    
+
+    # commented out the next block due to kernel crashing. originally used siglip model but switched to clip model
+ #   with torch.no_grad():
+ #       for batch in tqdm(batches, desc='embeddings extraction'):
+ #           inputs = EMBEDDINGS_PROCESSOR(images=batch, return_tensors='pt').to(DEVICE)
+ #           outputs = EMBEDDINGS_MODEL(**inputs)
+ #           embeddings = torch.mean(outputs.last_hidden_state, dim=1).cpu().numpy()
+ #           data.append(embeddings)
+
     with torch.no_grad():
-        for batch in tqdm(batches, desc='embeddings extraction'):
-            inputs = EMBEDDINGS_PROCESSOR(images=batch, return_tensors='pt').to(DEVICE)
-            outputs = EMBEDDINGS_MODEL(**inputs)
-            embeddings = torch.mean(outputs.last_hidden_state, dim=1).cpu().numpy()
-            data.append(embeddings)
-        
+        for batch in tqdm(batches, desc="embeddings extraction"):
+
+            processed_images = []
+
+            for img in batch:
+                if isinstance(img, Image.Image):
+                    pil_img = img
+                else:
+                    pil_img = Image.fromarray(img)
+            
+            processed_images.append(CLIP_PREPROCESS(pil_img))
+
+        images = torch.stack(processed_images).to(DEVICE)
+
+        embeddings = CLIP_MODEL.encode_image(images)
+        embeddings = embeddings.cpu().numpy()
+
+        data.append(embeddings)
+
+    print("Embedding batch shape:", embeddings.shape)
+
     data = np.concatenate(data)
 
     data.shape
 
 
 # %%
+
