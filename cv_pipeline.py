@@ -16,6 +16,8 @@ import numpy as np
 from more_itertools import chunked
 import clip
 from PIL import Image
+import umap
+from sklearn.cluster import KMeans
 
 
 # commented out next 4 lines due to kernel craching. I originally trained the model in google colab with a GPU but this crashes in streamlit. instead of siglip, i will use clip.
@@ -96,20 +98,49 @@ def ssi_bounding_box(video_path):
                 else:
                     pil_img = Image.fromarray(img)
             
-            processed_images.append(CLIP_PREPROCESS(pil_img))
+                processed_images.append(CLIP_PREPROCESS(pil_img))
 
-        images = torch.stack(processed_images).to(DEVICE)
+            images = torch.stack(processed_images).to(DEVICE)
 
-        embeddings = CLIP_MODEL.encode_image(images)
-        embeddings = embeddings.cpu().numpy()
+            embeddings = CLIP_MODEL.encode_image(images)
+            embeddings = embeddings.cpu().numpy()
 
-        data.append(embeddings)
+            data.append(embeddings)
 
-    print("Embedding batch shape:", embeddings.shape)
+            print("Embedding batch shape:", embeddings.shape)
 
     data = np.concatenate(data)
 
     data.shape
+    print("data shape is:",data.shape)
+
+
+    REDUCER = umap.UMAP(n_components=3)
+    CLUSTERING_MODEL = KMeans(n_clusters=2)
+
+    #debugging
+    print("DEBUG — type(data):", type(data))
+    print("DEBUG — data.shape BEFORE any fix:", np.array(data).shape)
+
+    # dimensionality reduction
+    projections = REDUCER.fit_transform(data)
+    print("Projections shape:", projections.shape)
+
+    clusters = CLUSTERING_MODEL.fit_predict(projections)
+
+    clusters[:10]
+
+    team_0 = [
+    crop
+    for crop, cluster
+    in zip(crops, clusters)
+    if cluster ==0
+    ]
+
+    sv.plot_images_grid(team_0[:100], grid_size=(10, 10))
+
+    
+
 
 
 # %%
