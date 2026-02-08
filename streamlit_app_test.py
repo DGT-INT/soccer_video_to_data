@@ -1,30 +1,13 @@
-import os
-import sys
-
-print("Working directory:", os.getcwd())
-print("sys.path:", sys.path)
-
-
-import sys
-import os
-
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
-###
 from cv_pipeline import ssi_bounding_box
 import streamlit as st
 from pathlib import Path
-
-
+import time
 
 # Set page configuration
 st.title("Smart Soccer Insights")
 st.logo("02 Resources/logo.png", size="large")
 st.header("By: :green[DGT-International]", divider='rainbow')
-st.markdown(
-    ':green[DGT-International] developped a cutting-edge AI app that tracks soccer players.')
+st.markdown(':green[DGT-International] developped a cutting-edge AI app that tracks soccer players.')
 
 original_video = None
 
@@ -42,6 +25,8 @@ if use_sample:
 else:
     original_video = st.file_uploader(
         "Upload soccer footage to Smart Soccer Insights", type=["mp4", "mov", "avi"])
+
+if original_video is not None:
     st.success("Original video uploaded successfully!")
 
 # Display Original Video
@@ -53,11 +38,24 @@ if original_video is not None:
         st.video(original_video)
 
 # testing
-if original_video is not None:
-    st.header("Testing SSI Bounding Box Function")
+#cacheing the function to avoid re-running it every time the app rerenders
+@st.cache_data
+def run_ssi_bounding_box(original_video, output_video):
     ssi_bounding_box(
         original_video,
-        "03 Data/sample_footage/app_test_video.mp4"
+        output_video
     )
+    return output_video
 
-    st.video("03 Data/sample_footage/app_test_video.mp4")
+if original_video is not None:
+    st.header("Testing SSI Bounding Box Function")
+    with st.spinner('Please allow about 15 minutes to detect and track players...', show_time=True):
+        output_video = run_ssi_bounding_box(
+            original_video,
+            "03 Data/sample_footage/app_test_video.mp4"
+        )
+
+    st.success('Player detection and tracking complete!')
+    
+    if st.button('See results'):
+        st.video("03 Data/sample_footage/app_test_video.mp4")
