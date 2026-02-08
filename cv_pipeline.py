@@ -18,7 +18,7 @@ import clip
 from PIL import Image
 import umap
 from sklearn.cluster import KMeans
-from sports.common.team import TeamClassifier
+#from sports.common.team import TeamClassifier
 
 
 # commented out next 4 lines due to kernel craching. I originally trained the model in google colab with a GPU but this crashes in streamlit. instead of siglip, i will use clip.
