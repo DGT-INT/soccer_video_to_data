@@ -34,14 +34,14 @@ The app includes loading indicators and caching to handle long-running computati
 A detailed explanation of the methodology, experiments, and evaluation can be found in the accompanying paper:
 
 paper coming soon!!!
-📄 `paper/your_paper_name.pdf`
+📄 `05 Deliverables/Conference Paper.pdf`
 
 ## Future Work
 
 TBD
 
 ## Status
-This project is currently in progress. Features, models, and documentation are actively being developed.
+The Streamlit app is currently in progress.
 
 
 
