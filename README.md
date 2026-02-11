@@ -1,6 +1,3 @@
-# soccer_video_to_data
-Smart Soccer Insights uses computer vision to convert soccer game footage into structured coordinate and event data. With deep learning for detection, tracking, and action recognition, it enables downstream analysis of player movement, tactics, and performance.
-
 # Single-Camera Soccer Player Tracking
 
 This project extracts player coordinates from standard broadcast soccer footage using a single-camera computer vision pipeline.
@@ -20,17 +17,10 @@ This project explores whether reliable player tracking can be achieved using sta
 - `data/` – Sample input footage and outputs
 
 ## Demo
+
 Demo coming soon!!!
 
-## Method Overview
-
-1. Input broadcast soccer footage
-2. Detect players using object detection
-3. Track players across frames
-4. Transform image coordinates into a normalized pitch representation
-5. Output tracked player trajectories and annotated video
-
-## Streamlit App
+Smart Soccer Insights (SSI) uses computer vision to convert soccer game footage into structured coordinate data. With deep learning for detection and tracking, SSI enables downstream analysis of player movement, tactics, and performance.
 
 The app allows users to:
 - Upload custom footage or use a sample video
